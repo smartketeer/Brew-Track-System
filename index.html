@@ -1,0 +1,381 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>BrewTrack POS & Inventory</title>
+
+  <!-- Main styles -->
+  <link rel="stylesheet" href="css/styles.css" />
+
+  <!-- Bell icon -->
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.0/css/all.min.css" />
+</head>
+<body>
+
+  <!--NEED SIGN IN PAGE MUST SHOW FIRST-->
+  <!--NEED OPTIONS FOR PAYMENT (GCASH, PAYMENT)-->
+  <!--NEED UI IMPROVEMENT FOR INVENTORY TABLE-->
+
+  <!-- Side Navigation -->
+  <nav class="sidenav" id="sidenav" aria-label="Main navigation">
+    <div class="sidenav-header">
+      <h2>BrewTrack</h2>
+    </div>
+
+    <ul class="sidenav-menu" role="menu">
+      <li><a href="#dashboard" class="active">Dashboard</a></li>
+      <li><a href="#pos">Point of Sale</a></li>
+      <li><a href="#history">Transaction History</a></li>
+      <li><a href="#inventory">Inventory</a></li>
+      <li><a href="#users">Users</a></li>
+    </ul>
+
+    <div class="sidebar-footer">© 2025 Hit Notes Café</div>
+  </nav>
+
+  <!-- Main Content -->
+  <div id="main-content">
+    <main>
+      <!-- topbar -->
+      <div class="topbar" role="region" aria-label="Topbar">
+        <div class="left-controls">
+          <button class="open-btn" onclick="openNav()" aria-label="Open menu">☰ Menu</button>
+          <input id="globalSearch" type="text" placeholder="Search products..." aria-label="Search products or inventory" />
+        </div>
+
+        <!-- Right side controls (notifications, badges, user actions) -->
+        <div class="right-controls">
+          <div class="notification-wrapper" id="notificationWrapper">
+            <button
+              class="notification-btn"
+              id="notifBtn"
+              aria-haspopup="true"
+              aria-expanded="false"
+              aria-controls="notifPanel"
+              title="Low stock alerts">
+              <i class="fa-solid fa-bell" aria-hidden="true"></i>
+              <span class="notif-count" id="notifCount">0</span>
+            </button>
+
+            <div class="notif-panel" id="notifPanel" role="dialog" aria-label="Low stock alerts" aria-hidden="true">
+              <h4>Low Stock Alerts</h4>
+              <ul id="notifList"></ul>
+            </div>
+          </div>
+          <div class="user-actions">
+            <span id="currentUserLabel"></span>
+            <button class="btn" id="signoutBtn" style="display:none;">Sign out</button>
+          </div>
+        </div>
+      </div>
+
+      <!-- Views -->
+      <section id="dashboard" class="view active">
+        <h1>Dashboard</h1>
+        <p>Welcome to BrewTrack — monitor sales and inventory at a glance.</p>
+
+        <!-- Dashboard Summary Cards -->
+        <div class="dashboard-cards">
+          <div class="card" id="bestsellerCard">
+            <h3>Bestseller Product</h3>
+            <p id="bestsellerName">-</p>
+            <span id="bestsellerQty">0 sold</span>
+          </div>
+
+          <div class="card" id="totalSalesCard">
+            <h3>Total Sales Today</h3>
+            <p id="totalSalesToday">₱0</p>
+          </div>
+
+          <div class="card" id="totalOrdersCard">
+            <h3>Total Orders Today</h3>
+            <p id="totalOrdersToday">0</p>
+          </div>
+        </div>
+
+        <div class="analytics-section">
+          <div class="chart-card">
+            <div style="display:flex;justify-content:space-between;align-items:center;">
+              <h2>Sales Overview</h2>
+              <select id="salesFilter" class="sales-dropdown">
+                <option value="daily">Daily</option>
+                <option value="weekly" selected>Weekly</option>
+                <option value="monthly">Monthly</option>
+              </select>
+            </div>
+            <canvas id="salesOverviewChart" height="300"></canvas>
+          </div>
+
+          <div class="chart-card">
+            <h2>Product Category Sales</h2>
+            <canvas id="categorySalesChart" height="300"></canvas>
+          </div>
+
+        </div>
+      </section>
+
+      <section id="pos" class="view pos-view">
+  <div class="view-header">
+    <h2>Point of Sale</h2>
+  </div>
+
+  <!-- Main Categories -->
+  <div class="category-buttons" id="mainCategoryButtons" role="tablist" aria-label="POS categories">
+    <button class="category-btn active" data-category="all">Menu</button>
+    <button class="category-btn" data-category="bestsellers">Bestsellers</button>
+    <button class="category-btn" data-category="noncoffee">Non-Coffee Drinks</button>
+    <button class="category-btn" data-category="coffee">Coffee Drinks</button>
+    <button class="category-btn" data-category="pastries">Pastries</button>
+  </div>
+
+  <!-- Non-Coffee Subcategories (Hidden by Default) -->
+  <div class="subcategory-buttons" id="nonCoffeeSubcats" aria-hidden="true" hidden>
+    <button class="subcat-btn active" data-subcat="all">All Non-Coffee</button>
+    <button class="subcat-btn" data-subcat="creamcheese">Cream Cheese Series</button>
+    <button class="subcat-btn" data-subcat="creamy">Creamy Series</button>
+    <button class="subcat-btn" data-subcat="soda">Soda Series</button>
+  </div>
+
+  <div class="pos-layout">
+    <!-- Menu Grid -->
+    <div class="pos-menu-grid" id="menuGrid" aria-live="polite"></div>
+
+    <!-- Order Ticket -->
+      <aside class="pos-order-panel ticket" aria-label="Order ticket">
+        <h3>Order Ticket</h3>
+        <ul class="order-list" id="ticketItems"></ul>
+
+        <div class="order-summary">
+          <div class="sum-row"><span>Subtotal</span><span id="subtotal">₱0.00</span></div>
+          <div class="sum-row"><span>Discount (20%)</span><span id="discount">₱0.00</span></div>
+          <div class="sum-row discount-type">
+            <span>Discount Type</span>
+            <div id="discountTypeGroup" class="chips">
+              <button type="button" class="discount-chip active" data-type="none">None</button>
+              <button type="button" class="discount-chip" data-type="pwd">PWD</button>
+              <button type="button" class="discount-chip" data-type="senior">Senior</button>
+              <button type="button" class="discount-chip" data-type="student">Student</button>
+            </div>
+          </div>
+          
+          <div class="sum-row">
+            <label for="cashReceived">Cash Received</label>
+            <input id="cashReceived" type="number" inputmode="decimal" min="0" step="0.01" placeholder="0.00" />
+          </div>
+          <div class="sum-row"><span>Change</span><span id="changeDue">₱0.00</span></div>
+          <div class="sum-row total"><span>Total</span><span id="total">₱0.00</span></div>
+          <button class="btn primary pay-btn" id="payBtn">Pay Now</button>
+        </div>
+      </aside>
+  </div>
+</section>
+
+      <section id="inventory" class="view">
+        <div class="inv-header">
+          <h1>Inventory</h1>
+          <button id="editInventoryBtn" class="btn primary">Edit Inventory</button>
+          <button id="saveInventoryBtn" class="btn success" style="display:none;">Save Changes</button>
+          <button id="addInventoryBtn" class="btn info" style="display:none;">+ Add Item</button>
+        </div>
+
+        <table class="inventory-table" aria-label="Inventory table">
+          <thead>
+            <tr>
+              <th>Item</th>
+              <th>Stock</th>
+              <th>Unit</th>
+              <th>Threshold</th>
+            </tr>
+          </thead>
+          <tbody id="inventoryTable"></tbody>
+        </table>
+      </section>
+
+      <section id="users" class="view">
+        <div class="view-header">
+          <h2>Users</h2>
+        </div>
+        <div class="users-tabs">
+          <div class="tab-buttons">
+            <button class="tab-btn active" data-tab="directory">Directory</button>
+            <button class="tab-btn" data-tab="roles">Roles</button>
+            <button class="tab-btn" data-tab="activity">Activity</button>
+            <button class="tab-btn" data-tab="settings">Settings</button>
+          </div>
+          <div class="tab-panels">
+            <div class="tab-panel active" id="tab-directory">
+              <div class="history-controls" style="margin-bottom:8px;">
+                <input type="text" class="pos-search" id="usersSearch" placeholder="Search users..." />
+                <button class="btn" id="addUserBtn">Add User</button>
+              </div>
+              <table class="inventory-table">
+                <thead>
+                  <tr>
+                    <th>Name</th>
+                    <th>Username</th>
+                    <th>Role</th>
+                    <th>Status</th>
+                    <th>Last Login</th>
+                    <th>Actions</th>
+                  </tr>
+                </thead>
+                <tbody id="usersDirectoryTable">
+                  <tr data-role="admin">
+                    <td>Manager One</td>
+                    <td>manager1</td>
+                    <td><span class="role-pill admin">Admin</span></td>
+                    <td><span class="status-pill active">Active</span></td>
+                    <td>—</td>
+                    <td>
+                      <button class="btn mini user-disable-btn">Disable</button>
+                      <button class="btn mini user-reset-btn">Reset</button>
+                      <button class="btn mini danger user-delete-btn">Delete</button>
+                    </td>
+                  </tr>
+                  <tr data-role="staff">
+                    <td>Staff A</td>
+                    <td>staffa</td>
+                    <td><span class="role-pill staff">Staff</span></td>
+                    <td><span class="status-pill active">Active</span></td>
+                    <td>—</td>
+                    <td>
+                      <button class="btn mini user-disable-btn">Disable</button>
+                      <button class="btn mini user-reset-btn">Reset</button>
+                      <button class="btn mini danger user-delete-btn">Delete</button>
+                    </td>
+                  </tr>
+                </tbody>
+              </table>
+            </div>
+            <div class="tab-panel" id="tab-roles">
+              <div class="roles-grid">
+                <div class="role-card">
+                  <h3>Admin</h3>
+                  <p>Access: Dashboard, POS, History, Inventory, Users</p>
+                </div>
+                <div class="role-card">
+                  <h3>Staff</h3>
+                  <p>Access: POS, History</p>
+                </div>
+              </div>
+            </div>
+            <div class="tab-panel" id="tab-activity">
+              <div class="activity-cards">
+                <div class="card"><h3>Orders Processed</h3><p id="userOrdersCount">0</p></div>
+                <div class="card"><h3>Inventory Edits</h3><p id="userInventoryEdits">0</p></div>
+              </div>
+            </div>
+            <div class="tab-panel" id="tab-settings">
+              <div class="settings-list">
+                <button class="btn" id="exportUsersBtn">Export Users</button>
+                <button class="btn" id="importUsersBtn">Import Users</button>
+              </div>
+            </div>
+          </div>
+        </div>
+      </section>
+
+      <section id="history" class="view">
+        <div class="view-header">
+          <h2>Transaction History</h2>
+        </div>
+        <div class="history-controls">
+          <div class="input-group search">
+            <i class="fa-solid fa-magnifying-glass icon" aria-hidden="true"></i>
+            <input id="historySearch" type="text" placeholder="Search order ID or item..." aria-label="Search orders" />
+          </div>
+          <div class="input-group">
+            <label for="historyStart">From</label>
+            <input id="historyStart" type="date" aria-label="Start date" />
+          </div>
+          <div class="input-group">
+            <label for="historyEnd">To</label>
+            <input id="historyEnd" type="date" aria-label="End date" />
+          </div>
+        </div>
+        <table class="inventory-table" aria-label="Transaction history">
+          <thead>
+            <tr>
+              <th>Order ID</th>
+              <th>Date</th>
+              <th>Payment</th>
+              <th>Items</th>
+              <th>Subtotal</th>
+              <th>Discount</th>
+              <th>Total</th>
+              <th>Action</th>
+            </tr>
+          </thead>
+          <tbody id="historyTable"></tbody>
+        </table>
+      </section>
+
+      <section id="signin" class="view">
+        <div class="signin-hero">
+          <div class="hero-media">
+            <video id="introVideo" src="assets/intro.mp4" autoplay muted loop playsinline></video>
+          </div>
+          <div class="signin-card">
+            <div class="signin-header"><img src="assets/logo.jpg" alt="Brand" class="brand-chip" /><h2>Welcome Back</h2></div>
+            <p class="subtext">Sip the stress away.</p>
+            <form id="signinForm">
+              <div class="input-row">
+                <label for="signinUser">Username</label>
+                <div class="input-with-icon">
+                  <input id="signinUser" type="text" placeholder="User Name" required />
+                  <i class="fa-solid fa-user icon right" aria-hidden="true"></i>
+                </div>
+              </div>
+              <div class="input-row">
+                <label for="signinRole">Role</label>
+                <div class="input-with-icon">
+                  <select id="signinRole">
+                    <option value="staff">Employee / Staff</option>
+                    <option value="admin">Admin</option>
+                  </select>
+                  <i class="fa-solid fa-users icon right" aria-hidden="true"></i>
+                </div>
+              </div>
+              <div class="input-row">
+                <label for="signinPass">Password</label>
+                <div class="input-with-icon">
+                  <input id="signinPass" type="password" placeholder="Password" />
+                  <i class="fa-solid fa-eye-slash icon right" aria-hidden="true"></i>
+                </div>
+              </div>
+              <div class="signin-actions">
+                <label class="remember">
+                  <input type="checkbox" id="rememberMe" checked />
+                  <span class="checkmark"></span>
+                  <span>Remember me</span>
+                </label>
+              </div>
+              <button type="submit" class="btn login wide" id="signinBtn">Login</button>
+            </form>
+          </div>
+        </div>
+      </section>
+    </main>
+  </div>
+
+  <!-- Sidebar open/close helpers -->
+  <script>
+    function openNav() {
+      document.getElementById("sidenav").style.width = "250px";
+      document.getElementById("main-content").style.marginLeft = "250px";
+    }
+    function closeNav() {
+      document.getElementById("sidenav").style.width = "0";
+      document.getElementById("main-content").style.marginLeft = "0";
+    }
+  </script>
+
+  <!-- Chart.js -->
+  <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+
+  <!-- App logic -->
+  <script src="js/app.js"></script>
+  <script src="js/analytics.js"></script>
+</body>
+</html>
